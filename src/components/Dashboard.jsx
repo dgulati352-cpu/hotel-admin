@@ -2,7 +2,10 @@ import React from 'react';
 import { DollarSign, ShoppingBag, TrendingUp, Users } from 'lucide-react';
 
 export default function Dashboard({ orders }) {
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total_amount, 0);
+  const totalRevenue = orders.reduce((sum, order) => {
+    const amount = Number(order.total_amount) || Number(order.total) || Number(order.totalAmount) || 0;
+    return sum + amount;
+  }, 0);
   const totalOrders = orders.length;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 

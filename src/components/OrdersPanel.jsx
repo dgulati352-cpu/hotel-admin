@@ -60,7 +60,7 @@ export default function OrdersPanel({ orders, addToast }) {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--primary-blue)', marginBottom: '4px' }}>
-                    ₹{order.total_amount}
+                    ₹{order.total_amount || order.total || order.totalAmount || 0}
                   </div>
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                     {order.payment_method}
