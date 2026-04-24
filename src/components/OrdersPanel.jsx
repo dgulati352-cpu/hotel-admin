@@ -71,12 +71,15 @@ export default function OrdersPanel({ orders, addToast }) {
               <div style={{ backgroundColor: 'var(--bg-dark)', padding: '16px', borderRadius: '8px' }}>
                 <h4 style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Items Ordered</h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {order.items.map((item, idx) => (
+                  {(order.items || []).map((item, idx) => (
                     <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem' }}>
                       <span><span style={{ color: 'var(--primary-blue)', marginRight: '8px' }}>{item.quantity}x</span> {item.name}</span>
                       <span>₹{item.price * item.quantity}</span>
                     </div>
                   ))}
+                  {(!order.items || order.items.length === 0) && (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No items details available.</div>
+                  )}
                 </div>
               </div>
 
