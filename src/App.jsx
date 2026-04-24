@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css'; // Just keeping it empty to not break vite's default if we left import
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
@@ -19,6 +19,9 @@ function App() {
   const [dishes, setDishes] = useState([]);
   const [orders, setOrders] = useState([]);
   const [toasts, setToasts] = useState([]);
+  
+  const isFirstLoad = useRef(true);
+  const prevOrderIds = useRef(new Set());
 
   const addToast = (title, message, type = 'info') => {
     const id = Date.now();
@@ -33,6 +36,10 @@ function App() {
   };
 
   useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     // Listen to orders
     const ordersRef = ref(db, 'orders');
     const unsubscribeOrders = onValue(ordersRef, (snapshot) => {
@@ -40,9 +47,31 @@ function App() {
       if (data) {
         let newOrders = Object.keys(data).map(key => ({ id: key, ...data[key] }));
         newOrders.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        if (!isFirstLoad.current) {
+          newOrders.forEach(order => {
+            if (order.status === 'pending' && !prevOrderIds.current.has(order.id)) {
+              addToast('New Order!', `Table ${order.table_number} placed an order for ₹${order.total_amount}`, 'success');
+              
+              const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+              audio.play().catch(e => console.log("Audio autoplay blocked by browser"));
+
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('New Order Received!', {
+                  body: `Table ${order.table_number} placed an order for ₹${order.total_amount}`,
+                  icon: '/vite.svg'
+                });
+              }
+            }
+          });
+        }
+        
+        prevOrderIds.current = new Set(newOrders.map(o => o.id));
         setOrders(newOrders);
+        isFirstLoad.current = false;
       } else {
         setOrders([]);
+        isFirstLoad.current = false;
       }
     });
 
