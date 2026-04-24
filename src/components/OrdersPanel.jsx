@@ -4,36 +4,30 @@ import { ref, update } from 'firebase/database';
 import { db } from '../firebase';
 
 export default function OrdersPanel({ orders, addToast }) {
-  const handleAcceptOrder = async (orderId) => {
+  const handleUpdateStatus = async (orderId, newStatus) => {
     try {
-      await update(ref(db, `orders/${orderId}`), { status: 'completed' });
-      addToast('Success', `Order #${orderId.slice(-4)} accepted`, 'success');
+      await update(ref(db, `orders/${orderId}`), { status: newStatus });
+      addToast('Success', `Order status updated to ${newStatus}`, 'success');
     } catch (error) {
       console.error(error);
       addToast('Error', 'Failed to update order status.', 'error');
     }
   };
 
-  const handleRejectOrder = async (orderId) => {
-    if (window.confirm('Are you sure you want to reject this order?')) {
-      try {
-        await update(ref(db, `orders/${orderId}`), { status: 'rejected' });
-        addToast('Order Rejected', `Order #${orderId.slice(-4)} has been rejected.`, 'error');
-      } catch (error) {
-        console.error(error);
-        addToast('Error', 'Failed to update order status.', 'error');
-      }
-    }
-  };
-
   const getStatusBadge = (status) => {
     switch (status) {
       case 'completed':
-        return <span className="badge badge-veg"><CheckCircle size={14} style={{ marginRight: '4px' }}/> Completed</span>;
+      case 'picked up':
+        return <span className="badge badge-veg"><CheckCircle size={14} style={{ marginRight: '4px' }}/> Picked Up</span>;
       case 'rejected':
         return <span className="badge badge-non-veg"><XCircle size={14} style={{ marginRight: '4px' }}/> Rejected</span>;
+      case 'accepted':
+        return <span className="badge" style={{ backgroundColor: 'var(--primary-blue)', color: '#fff', border: 'none' }}><CheckCircle size={14} style={{ marginRight: '4px' }}/> Accepted</span>;
+      case 'preparing':
+        return <span className="badge" style={{ backgroundColor: '#f59e0b', color: '#fff', border: 'none' }}><Clock size={14} style={{ marginRight: '4px' }}/> Preparing</span>;
+      case 'pending':
       default:
-        return <span className="badge" style={{ backgroundColor: 'var(--warning-color)', color: '#000' }}><Clock size={14} style={{ marginRight: '4px' }}/> Pending</span>;
+        return <span className="badge" style={{ backgroundColor: 'var(--bg-dark)', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}><Clock size={14} style={{ marginRight: '4px' }}/> Pending</span>;
     }
   };
 
@@ -83,24 +77,46 @@ export default function OrdersPanel({ orders, addToast }) {
                 </div>
               </div>
 
-              {order.status === 'pending' && (
-                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                {(!order.status || order.status === 'pending') && (
+                  <>
+                    <button 
+                      className="btn btn-primary" 
+                      style={{ flex: 1 }}
+                      onClick={() => handleUpdateStatus(order.id, 'accepted')}
+                    >
+                      Accept Order
+                    </button>
+                    <button 
+                      className="btn btn-outline" 
+                      style={{ flex: 1, color: 'var(--danger-color)', borderColor: 'var(--danger-color)' }}
+                      onClick={() => handleUpdateStatus(order.id, 'rejected')}
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
+
+                {order.status === 'accepted' && (
                   <button 
                     className="btn btn-primary" 
-                    style={{ flex: 1 }}
-                    onClick={() => handleAcceptOrder(order.id)}
+                    style={{ flex: 1, backgroundColor: '#f59e0b', color: '#000', border: 'none' }}
+                    onClick={() => handleUpdateStatus(order.id, 'preparing')}
                   >
-                    Accept Order
+                    Start Preparing
                   </button>
+                )}
+
+                {order.status === 'preparing' && (
                   <button 
-                    className="btn btn-outline" 
-                    style={{ flex: 1, color: 'var(--danger-color)', borderColor: 'var(--danger-color)' }}
-                    onClick={() => handleRejectOrder(order.id)}
+                    className="btn btn-primary" 
+                    style={{ flex: 1, backgroundColor: 'var(--success-green)', color: '#fff', border: 'none' }}
+                    onClick={() => handleUpdateStatus(order.id, 'picked up')}
                   >
-                    Reject
+                    Mark as Picked Up
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           ))
         )}
