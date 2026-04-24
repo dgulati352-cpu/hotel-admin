@@ -1,7 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, ShoppingBag, UtensilsCrossed, Settings, LogOut } from 'lucide-react';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, onLogout }) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
     { id: 'orders', label: 'Orders', icon: <ShoppingBag size={20} /> },
@@ -27,7 +27,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         ))}
       </nav>
       <div className="sidebar-footer" style={{ padding: '16px 0', borderTop: '1px solid var(--border-color)' }}>
-        <a className="nav-item">
+        <a className="nav-item" onClick={onLogout} style={{ cursor: 'pointer' }}>
           <LogOut size={20} />
           <span>Logout</span>
         </a>

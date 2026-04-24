@@ -6,6 +6,7 @@ import { db } from '../firebase';
 export default function MenuManager({ dishes, setDishes, addToast }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDish, setEditingDish] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -31,12 +32,65 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingDish(null);
+    setIsDragging(false);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      processFile(file);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      processFile(file);
+    } else {
+      addToast('Error', 'Please drop a valid image file.', 'error');
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const processFile = (file) => {
+    // We use a basic file reader to convert to base64
+    // We resize it using canvas to avoid large payloads in RTDB
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setFormData({ ...formData, image: dataUrl });
+      };
+    };
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.price || !formData.image) {
-      addToast('Error', 'Please fill all fields and provide an image URL.', 'error');
+      addToast('Error', 'Please fill all fields and provide an image.', 'error');
       return;
     }
 
@@ -57,7 +111,7 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
       closeModal();
     } catch (error) {
       console.error(error);
-      addToast('Error', 'Failed to save dish.', 'error');
+      addToast('Error', 'Failed to save dish. Image might be too large.', 'error');
     }
   };
 
@@ -125,7 +179,7 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
           <div className="modal-content">
             <div className="modal-header">
               <h3>{editingDish ? 'Edit Dish' : 'Add New Dish'}</h3>
-              <button className="modal-close" onClick={closeModal}><X size={24} /></button>
+              <button className="modal-close" type="button" onClick={closeModal}><X size={24} /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
@@ -178,23 +232,52 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Image URL</label>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    placeholder="https://example.com/image.jpg" 
-                    value={formData.image}
-                    onChange={(e) => setFormData({...formData, image: e.target.value})}
-                    style={{ marginBottom: '12px' }}
-                  />
-                  {formData.image ? (
-                    <img src={formData.image} alt="Preview" className="image-preview" onError={(e) => e.target.src='https://via.placeholder.com/400x200?text=Invalid+Image+URL'} />
-                  ) : (
-                    <div className="image-upload-area">
-                      <ImageIcon size={32} color="var(--text-muted)" style={{ marginBottom: '12px' }} />
-                      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Paste an image URL above to see preview</p>
-                    </div>
-                  )}
+                  <label className="form-label">Dish Image</label>
+                  <div 
+                    className={`image-upload-area ${isDragging ? 'dragging' : ''}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => document.getElementById('file-upload').click()}
+                    style={{ 
+                      cursor: 'pointer', 
+                      border: isDragging ? '2px dashed var(--primary-blue)' : '2px dashed var(--border-color)',
+                      backgroundColor: isDragging ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                      padding: '24px',
+                      textAlign: 'center',
+                      borderRadius: '8px',
+                      transition: 'all 0.2s',
+                      marginTop: '8px'
+                    }}
+                  >
+                    <input 
+                      type="file" 
+                      id="file-upload" 
+                      accept="image/*" 
+                      onChange={handleFileChange} 
+                      style={{ display: 'none' }} 
+                    />
+                    {formData.image ? (
+                      <div style={{ position: 'relative' }}>
+                        <img src={formData.image} alt="Preview" className="image-preview" style={{ maxHeight: '200px', width: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+                        <button 
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setFormData({...formData, image: ''}); }}
+                          style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(0,0,0,0.6)', color: 'white', border: 'none', borderRadius: '50%', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                        <ImageIcon size={40} color={isDragging ? "var(--primary-blue)" : "var(--text-muted)"} />
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>
+                          <span style={{ color: 'var(--primary-blue)', fontWeight: 'bold' }}>Click to upload</span> or drag and drop
+                        </p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', opacity: 0.7, margin: 0 }}>SVG, PNG, JPG or GIF</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">

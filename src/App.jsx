@@ -6,10 +6,14 @@ import Dashboard from './components/Dashboard';
 import OrdersPanel from './components/OrdersPanel';
 import MenuManager from './components/MenuManager';
 import Toast from './components/Toast';
+import Login from './components/Login';
 import { db } from './firebase';
 import { ref, onValue } from 'firebase/database';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('isAdminAuthenticated') === 'true';
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dishes, setDishes] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -81,9 +85,23 @@ function App() {
     }
   };
 
+  const handleLogin = () => {
+    localStorage.setItem('isAdminAuthenticated', 'true');
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('isAdminAuthenticated');
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <div className="app-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} onLogout={handleLogout} />
       <main className="main-content">
         <Topbar 
           title={activeTab.charAt(0).toUpperCase() + activeTab.slice(1).replace(/([A-Z])/g, ' $1').trim()} 
