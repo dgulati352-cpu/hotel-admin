@@ -7,6 +7,7 @@ import OrdersPanel from './components/OrdersPanel';
 import MenuManager from './components/MenuManager';
 import Toast from './components/Toast';
 import Login from './components/Login';
+import Settings from './components/Settings';
 import { db } from './firebase';
 import { ref, onValue } from 'firebase/database';
 
@@ -74,12 +75,7 @@ function App() {
       case 'menu':
         return <MenuManager dishes={dishes} setDishes={setDishes} addToast={addToast} />;
       case 'settings':
-        return (
-          <div className="card">
-            <h2>Settings</h2>
-            <p style={{ color: 'var(--text-muted)', marginTop: '16px' }}>Settings page configuration goes here.</p>
-          </div>
-        );
+        return <Settings addToast={addToast} />;
       default:
         return <Dashboard orders={orders} />;
     }

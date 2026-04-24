@@ -1,17 +1,30 @@
 import React, { useState } from 'react';
 import { Lock } from 'lucide-react';
+import { ref, get } from 'firebase/database';
+import { db } from '../firebase';
 
 export default function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simple hardcoded password for now. The user can change this later.
-    if (password === 'admin123') {
-      onLogin();
-    } else {
-      setError('Incorrect password');
+    setIsLoading(true);
+    try {
+      const snapshot = await get(ref(db, 'settings/password'));
+      const correctPassword = snapshot.exists() ? snapshot.val() : 'admin123';
+      
+      if (password === correctPassword) {
+        onLogin();
+      } else {
+        setError('Incorrect password');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('Error verifying password. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -66,6 +79,7 @@ export default function Login({ onLogin }) {
               }}
               style={{ padding: '12px 16px', fontSize: '1rem' }}
               autoFocus
+              disabled={isLoading}
             />
           </div>
           
@@ -79,8 +93,9 @@ export default function Login({ onLogin }) {
             type="submit" 
             className="btn btn-primary"
             style={{ width: '100%', padding: '12px', fontSize: '1rem', marginTop: '8px' }}
+            disabled={isLoading}
           >
-            Unlock Dashboard
+            {isLoading ? 'Verifying...' : 'Unlock Dashboard'}
           </button>
         </form>
       </div>
