@@ -11,6 +11,9 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
+    halfPrice: '',
+    fullPrice: '',
+    portionsEnabled: false,
     category: 'Main Course',
     type: 'veg',
     image: ''
@@ -21,10 +24,10 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
   const openModal = (dish = null) => {
     if (dish) {
       setEditingDish(dish);
-      setFormData({ ...dish });
+      setFormData({ halfPrice: '', fullPrice: '', portionsEnabled: false, ...dish });
     } else {
       setEditingDish(null);
-      setFormData({ name: '', price: '', category: 'Main Course', type: 'veg', image: '' });
+      setFormData({ name: '', price: '', halfPrice: '', fullPrice: '', portionsEnabled: false, category: 'Main Course', type: 'veg', image: '' });
     }
     setIsModalOpen(true);
   };
@@ -89,14 +92,25 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.price || !formData.image) {
+    if (!formData.name || !formData.image) {
       addToast('Error', 'Please fill all fields and provide an image.', 'error');
+      return;
+    }
+    if (formData.portionsEnabled && (!formData.halfPrice || !formData.fullPrice)) {
+      addToast('Error', 'Please enter both Half and Full prices.', 'error');
+      return;
+    }
+    if (!formData.portionsEnabled && !formData.price) {
+      addToast('Error', 'Please enter a price.', 'error');
       return;
     }
 
     const dishData = {
       ...formData,
-      price: Number(formData.price),
+      price: formData.portionsEnabled ? Number(formData.halfPrice) : Number(formData.price),
+      halfPrice: formData.portionsEnabled ? Number(formData.halfPrice) : null,
+      fullPrice: formData.portionsEnabled ? Number(formData.fullPrice) : null,
+      portionsEnabled: !!formData.portionsEnabled,
     };
 
     try {
@@ -166,8 +180,21 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
                 <h3 style={{ fontSize: '1.1rem', marginBottom: '4px' }}>{dish.name}</h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{dish.category}</p>
               </div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary-blue)', marginTop: '12px' }}>
-                ₹{dish.price}
+              <div style={{ marginTop: '12px' }}>
+                {dish.portionsEnabled ? (
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.8rem', padding: '3px 10px', borderRadius: '20px', background: 'rgba(59,130,246,0.12)', color: 'var(--primary-blue)', fontWeight: 600 }}>
+                      Half ₹{dish.halfPrice}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', padding: '3px 10px', borderRadius: '20px', background: 'rgba(59,130,246,0.22)', color: 'var(--primary-blue)', fontWeight: 600 }}>
+                      Full ₹{dish.fullPrice}
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--primary-blue)' }}>
+                    ₹{dish.price}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -194,8 +221,52 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
                   />
                 </div>
                 
-                <div style={{ display: 'flex', gap: '16px' }}>
-                  <div className="form-group" style={{ flex: 1 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                    <span>Enable Half / Full Portions</span>
+                    <div 
+                      onClick={() => setFormData({...formData, portionsEnabled: !formData.portionsEnabled})}
+                      style={{
+                        width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer',
+                        background: formData.portionsEnabled ? 'var(--primary-blue)' : 'var(--border-color)',
+                        position: 'relative', transition: 'background 0.25s', flexShrink: 0
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: '3px',
+                        left: formData.portionsEnabled ? '23px' : '3px',
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        background: 'white', transition: 'left 0.25s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+                      }} />
+                    </div>
+                  </label>
+                </div>
+
+                {formData.portionsEnabled ? (
+                  <div style={{ display: 'flex', gap: '16px' }}>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label className="form-label">Half Price (₹)</label>
+                      <input 
+                        type="number" 
+                        className="form-control" 
+                        placeholder="E.g., 140" 
+                        value={formData.halfPrice}
+                        onChange={(e) => setFormData({...formData, halfPrice: e.target.value})}
+                      />
+                    </div>
+                    <div className="form-group" style={{ flex: 1 }}>
+                      <label className="form-label">Full Price (₹)</label>
+                      <input 
+                        type="number" 
+                        className="form-control" 
+                        placeholder="E.g., 250" 
+                        value={formData.fullPrice}
+                        onChange={(e) => setFormData({...formData, fullPrice: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="form-group">
                     <label className="form-label">Price (₹)</label>
                     <input 
                       type="number" 
@@ -205,17 +276,18 @@ export default function MenuManager({ dishes, setDishes, addToast }) {
                       onChange={(e) => setFormData({...formData, price: e.target.value})}
                     />
                   </div>
-                  <div className="form-group" style={{ flex: 1 }}>
-                    <label className="form-label">Type</label>
-                    <select 
-                      className="form-control form-select"
-                      value={formData.type}
-                      onChange={(e) => setFormData({...formData, type: e.target.value})}
-                    >
-                      <option value="veg">Vegetarian</option>
-                      <option value="non-veg">Non-Vegetarian</option>
-                    </select>
-                  </div>
+                )}
+
+                <div className="form-group">
+                  <label className="form-label">Type</label>
+                  <select 
+                    className="form-control form-select"
+                    value={formData.type}
+                    onChange={(e) => setFormData({...formData, type: e.target.value})}
+                  >
+                    <option value="veg">Vegetarian</option>
+                    <option value="non-veg">Non-Vegetarian</option>
+                  </select>
                 </div>
 
                 <div className="form-group">
